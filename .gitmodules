@@ -1,0 +1,3 @@
+[submodule "islplot"]
+	path = islplot
+	url = https://github.com/tobiasgrosser/islplot.git
