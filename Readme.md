@@ -27,3 +27,13 @@ sed -i -e 's/cdll.LoadLibrary("libc.so.6")/cdll.LoadLibrary("libc.dylib")/g' **/
 export PYTHONPATH="`pwd`/interface:`pwd`/isl/interface:$PYTHONPATH"
 export DYLD_LIBRARY_PATH="`pwd`/.libs:`pwd`/isl/.libs:/Users/lisa/Documents/llvm-project/build/install/lib:$DYLD_LIBRARY_PATH"
 ```
+
+jupyter nbconvert *.ipynb --to markdown --output *.md
+jupyter nbconvert 01_presburger_sets.ipynb  --to markdown --output 01_presburger_sets.md
+jupyter nbconvert 02_iteration-domains.ipynb  --to markdown --output 02_iteration-domains.md
+jupyter nbconvert 03_schedules.ipynb  --to markdown --output 03_schedules.md
+jupyter nbconvert 04_memory.ipynb  --to markdown --output 04_memory.md
+jupyter nbconvert 05_dependences.ipynb  --to markdown --output 05_dependences.md
+jupyter nbconvert 06_classical-loop-transformations.ipynb  --to markdown --output 06_classical-loop-transformations.md
+jupyter nbconvert 07_ast-generation.ipynb  --to markdown --output 07_ast-generation.md
+jupyter nbconvert 08_c-parser.ipynb  --to markdown --output 08_c-parser.md
