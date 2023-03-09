@@ -16,8 +16,9 @@ cd pet/
 # use brew install automake
 sed -i -e 's/^AM_INIT_AUTOMAKE.*/AM_INIT_AUTOMAKE/g' **/configure.ac
 sed -i -e 's/s\/-L\/-R\/g/s\/-L\/-Wl,-rpath,\/g/g' **/configure # setup rpath
-export CFLAGS=-I/Users/lisa/miniforge3/envs/dl/include # please use conda install gmp NOTE need replace by your path
-export LDFLAGS=-L/Users/lisa/miniforge3/envs/dl/lib # gmp.dylib
+sed -i -e 's/s\/-L\/-R\/g/s\/-L\/-Wl,-rpath,\/g/g' **/ax_detect_clang.m4 # avoid override by reconfigure.
+export CFLAGS=-I/Users/lisa/miniforge3/envs/ci/include # please use conda install gmp NOTE need replace by your path
+export LDFLAGS=-L/Users/lisa/miniforge3/envs/ci/lib # gmp.dylib
 ./configure --prefix=`pwd`/build --with-clang-prefix=/Users/lisa/Documents/llvm-project/build/install # the custom llvm install path
 make 
 
