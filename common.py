@@ -76,3 +76,11 @@ class CodeGenerator:
     printer.flush()
 
     return CSource('/tmp/generated.c')
+
+
+
+def parse_code(source: str, func_name: str) -> pet.scop:
+  with open("/tmp/parse_code.c", "w") as f:
+    f.write(source)
+  scop = pet.scop.extract_from_C_source("/tmp/parse_code.c", func_name)
+  return scop
