@@ -20,8 +20,8 @@ def plot_set_points(set_datas: Union[isl.set, List[isl.set]], color="black", siz
     for set_data in set_datas:
         points = []
         points = bset_get_points(set_data, scale=scale)
-        dimX = [x[0] for x in points]
-        dimY = [x[1] for x in points]
+        dimX = [x[1] for x in points]
+        dimY = [x[0] for x in points]
         _plt.plot(dimX, dimY, marker, markersize=size, color=color, lw=0)
 
 
@@ -49,7 +49,7 @@ def _plot_arrow(start, end, graph, *args, **kwargs):
                                        shrinkA=0,
                                        shrinkB=0,
                                        linewidth=width,
-                                       mutation_scale=20,
+                                       mutation_scale=15,
                                        color=color)
                        )
         return
@@ -61,14 +61,14 @@ def _plot_arrow(start, end, graph, *args, **kwargs):
                                    shrinkA=shrink,
                                    shrinkB=shrink,
                                    linewidth=width,
-                                   mutation_scale=20,
+                                   mutation_scale=15,
                                    color=color)
                    )
 
 
-def plot_map(map_datas: Union[List[isl.union_map], isl.union_map], edge_style="-|>", edge_width=1,
+def plot_map(map: isl.map, edge_style="-|>", edge_width=1,
              start_color="blue", end_color="orange", line_color="black", marker_size=7,
-             scale=1, shrink=1):
+             scale=1, shrink=6):
     """
     Given a map from a two dimensional set to another two dimensional set this
     functions prints the relations in this map as arrows going from the input
@@ -82,27 +82,33 @@ def plot_map(map_datas: Union[List[isl.union_map], isl.union_map], edge_style="-
                    to.
     :param scale: Scale the values.
     """
-    all_start: Tuple[int, int] = []
-    all_ends: Tuple[int, int] = []
-    start_points = []
-    if not isinstance(map_datas, list):
-        map_datas = [map_datas]
-    x_label = None
-    y_label = None
+    all_start: List[Tuple[int, int]] = []
+    all_ends: List[Tuple[int, int]] = []
+    start_points : List[isl.point] = []
+    map_datas : List[isl.basic_map] = []
+    labels : List[str] = []
+    map.foreach_basic_map(lambda bmap : map_datas.append(bmap))
     for map_data in map_datas:
-        if x_label is None:
-            x_label = map_data.get_space().get_dim_name(isl.ISL_DIM_TYPE.OUT, 0)
-        if y_label is None:
-            y_label = map_data.get_space().get_dim_name(isl.ISL_DIM_TYPE.OUT, 1)
+        if len(labels) == 0:
+            sp = map_data.get_space()
+            for i in range(2):
+              if sp.dim(isl.ISL_DIM_TYPE.OUT) > i:
+                if sp.has_dim_name(isl.ISL_DIM_TYPE.OUT, i):
+                  labels.append(sp.get_dim_name(isl.ISL_DIM_TYPE.OUT, i))
+                else:
+                  labels.append("")
+            labels.reverse()
         map_data.range().foreach_point(start_points.append)
         for start in start_points:
-            end_points = []
+            end_points: List[isl.point] = []
             limited = map_data.intersect_range(isl.set(start))
             limited.domain().foreach_point(end_points.append)
             s = get_point_coordinates(start, scale)
+            s.reverse()
             all_start.append(s)
             for end in end_points:
                 e = get_point_coordinates(end, scale)
+                e.reverse()
                 all_ends.append(e)
                 _plot_arrow(e,
                             s,
@@ -113,13 +119,15 @@ def plot_map(map_datas: Union[List[isl.union_map], isl.union_map], edge_style="-
         _plt.plot([p[0] for p in all_ends], [p[1]
                   for p in all_ends], "o", markersize=marker_size, color=end_color, lw=0)
     ax: _plt.Axes = _plt.gca()
-    _plt.xlabel(x_label)
-    _plt.ylabel(y_label, rotation = 0)
+    if labels[0] is not None:
+      _plt.xlabel(labels[0])
+    if labels[1] is not None:
+      _plt.ylabel(labels[1], rotation = 0)
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
 
-def plot_bset_shape(bset_data, show_vertices=True, color="gray",
+def plot_bset_shape(bset_data: isl.basic_set, show_vertices=True, color="gray",
                     alpha=1.0,
                     vertex_color=None,
                     vertex_marker="o", vertex_size=10,
@@ -149,8 +157,8 @@ def plot_bset_shape(bset_data, show_vertices=True, color="gray",
     vertices = bset_get_vertex_coordinates(bset_data, scale=scale)
 
     if show_vertices:
-        dimX = [x[0] for x in vertices]
-        dimY = [x[1] for x in vertices]
+        dimX = [x[1] for x in vertices]
+        dimY = [x[0] for x in vertices]
         _plt.plot(dimX, dimY, vertex_marker, markersize=vertex_size,
                   color=vertex_color)
 
@@ -214,7 +222,7 @@ def plot_set_shapes(set_data, *args, **kwargs):
     set_data.foreach_basic_set(lambda x: plot_bset_shape(x, **kwargs))
 
 
-def plot_map_as_groups(bmap, color="gray", alpha=1.0,
+def plot_map_as_groups(bmap: isl.basic_map, color="gray", alpha=1.0,
                        vertex_color=None, vertex_marker="o",
                        vertex_size=10, scale=1, border=0.25):
     """
@@ -240,18 +248,18 @@ def plot_map_as_groups(bmap, color="gray", alpha=1.0,
     if not vertex_color:
         vertex_color = color
 
-    points = []
+    points : List[isl.point] = []
     range = bmap.range()
     range.foreach_point(points.append)
 
     for point in points:
-        point_set = isl.basic_set.from_point(point)
-        part_set = bmap.intersect_range(point_set).domain()
-        part_set_convex = part_set.convex_hull()
+        point_set = isl.basic_set(point)
+        part_set: isl.set = bmap.intersect_range(point_set).domain()
+        part_set_convex: isl.basic_set = part_set.convex_hull()
 
         # We currently expect that each group can be represented by a
         # single convex set.
-        assert (part_set == part_set_convex)
+        assert (part_set.is_equal(part_set_convex))
 
         part_set = part_set_convex
 
@@ -265,13 +273,13 @@ def plot_map_as_groups(bmap, color="gray", alpha=1.0,
 
 
 def plot_domain(domain, dependences=None, tiling=None, space=None,
-                tile_color="blue", tile_alpha=1,
+                tile_color="skyblue", tile_alpha=1,
                 vertex_color="black", vertex_size=10,
                 vertex_marker="o", background=True,
                 bg_vertex_color="lightgray", bg_vertex_size=10,
                 bg_vertex_marker="o",
                 dep_color="gray", dep_style="->", dep_width=1,
-                shrink=10, border=0.25
+                shrink=6, border=0.25
                 ):
     """
     Plot an iteration space domain and related information.
@@ -322,7 +330,7 @@ def plot_domain(domain, dependences=None, tiling=None, space=None,
         if tiling:
             same_tile = tiling.apply_range(tiling.reverse())
             dependences = dependences.subtract(same_tile)
-        plot_map(dependences, color=dep_color, edge_style=dep_style,
+        plot_map(dependences, line_color=dep_color, edge_style=dep_style,
                  edge_width=dep_width, shrink=shrink)
 
     if tiling:

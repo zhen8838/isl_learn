@@ -1,8 +1,8 @@
 import isl
-from typing import Tuple
+from typing import Tuple, List
 
 
-def get_point_coordinates(point: isl.point, scale=1) -> Tuple[int, int]:
+def get_point_coordinates(point: isl.point, scale=1) -> List[int]:
   result = []
   for i in range(point.space().dim(isl.ISL_DIM_TYPE.SET)):
     result.append(int(point.get_coordinate_val(isl.ISL_DIM_TYPE.SET, i)
@@ -12,21 +12,21 @@ def get_point_coordinates(point: isl.point, scale=1) -> Tuple[int, int]:
   return result
 
 
-def _vertex_to_rational_point(vertex):
+def _vertex_to_rational_point(vertex: isl.vertex):
   """
   Given an n-dimensional vertex, this function returns an n-tuple consisting
   of pairs of integers. Each pair represents the rational value of the
   specific dimension with the first element of the pair being the nominator
   and the second element being the denominator.
   """
-  expr = vertex.get_expr()
+  expr : isl.multi_aff = vertex.get_expr()
 
   value = []
 
   for i in range(expr.dim(isl.ISL_DIM_TYPE.OUT)):
-    subexpr = expr.get_aff(i)
-    val = subexpr.get_constant_val()
-    value.append((val.get_num_si(), val.get_den_val().to_python()))
+    subexpr : isl.aff = expr.get_at(i)
+    val : isl.val = subexpr.get_constant_val()
+    value.append((val.get_num_si(), val.get_den_si()))
 
   return value
 
@@ -83,7 +83,7 @@ def _is_vertex_on_constraint(vertex, constraint):
   return int(summ) == 0
 
 
-def bset_get_vertex_coordinates(bset_data, scale=1):
+def bset_get_vertex_coordinates(bset_data: isl.basic_set, scale=1):
   """
   Given a basic set return the list of vertices at the corners.
 
@@ -93,7 +93,9 @@ def bset_get_vertex_coordinates(bset_data, scale=1):
   # Get the vertices.
   vertices = []
   bset_data.compute_vertices().foreach_vertex(vertices.append)
-  def f(x): return _vertex_get_coordinates(x, scale)
+  def f(x): 
+    coor = _vertex_get_coordinates(x, scale)
+    return (coor[1], coor[0]) 
   vertices = list(map(f, vertices))
 
   if len(vertices) <= 1:
@@ -353,19 +355,18 @@ def bset_get_points(bset_data, only_hull=False, scale=1):
   return points
 
 
-def get_rectangular_hull(set_data, offset=0):
+def get_rectangular_hull(set_data: isl.set, offset=0):
   uset_data = isl.set.universe(set_data.get_space())
 
   for dim in range(0, 2):
     ls = isl.local_space.from_space(set_data.get_space())
-    c = isl.constraint.inequality_alloc(ls)
+    c = isl.constraint.alloc_inequality(ls)
     incr = isl.map("{{[i]->[i+{0}]}}".format(offset))
     decr = isl.map("{{[i]->[i-{0}]}}".format(offset))
 
-    dim_val = isl.aff.zero_on_domain(ls).set_coefficient_val(isl.ISL_DIM_TYPE.IN, dim,
-                                                         1)
-    dim_val = isl.pw_aff.from_aff(dim_val)
-    dim_val = isl.map.from_pw_aff(dim_val)
+    dim_val = isl.aff.zero_on_domain(ls).set_coefficient_si(isl.ISL_DIM_TYPE.IN, dim, 1)
+    dim_val = isl.pw_aff(dim_val)
+    dim_val = dim_val.as_map()
 
     space = dim_val.get_space()
     dim_cst = isl.map.universe(space)
