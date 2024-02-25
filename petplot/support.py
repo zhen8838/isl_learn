@@ -1,4 +1,5 @@
 import isl
+import numpy as np
 from typing import Tuple, List
 
 
@@ -31,7 +32,7 @@ def _vertex_to_rational_point(vertex: isl.vertex):
   return value
 
 
-def _vertex_get_coordinates(vertex, scale=1):
+def _vertex_get_coordinates(vertex, scale=1) -> List[float]:
   """
   Get the coordinates of the an isl vertex as a tuple of float values.
 
@@ -91,12 +92,11 @@ def bset_get_vertex_coordinates(bset_data: isl.basic_set, scale=1):
   """
 
   # Get the vertices.
-  vertices = []
+  vertices : List[List[float]]= []
   bset_data.compute_vertices().foreach_vertex(vertices.append)
   def f(x): 
-    coor = _vertex_get_coordinates(x, scale)
-    return (coor[1], coor[0]) 
-  vertices = list(map(f, vertices))
+    return _vertex_get_coordinates(x, scale)[::-1]
+  vertices = np.array(list(map(f, vertices)))
 
   if len(vertices) <= 1:
     return vertices
@@ -106,13 +106,17 @@ def bset_get_vertex_coordinates(bset_data: isl.basic_set, scale=1):
   # We select a 'center' point that lies within the convex hull of the
   # vertices. We then sort all points according to the direction (given as an
   # angle in radiens) they lie in respect to the center point.
-  from math import atan2 as _atan2
-  center = ((vertices[0][0] + vertices[1][0]) / 2.0,
-            (vertices[0][1] + vertices[1][1]) / 2.0)
-
-  def f(x): return _atan2(x[0] - center[0], x[1] - center[1])
+  center = np.sum(vertices[:2],0) / 2
+  if vertices.shape[1]==3:
+    A = vertices[0]
+    B = vertices[1]
+    C = vertices[2]
+    N = norm(A, B, C)
+    def f(a): return angle(A, a, center, N)
+  else:
+    def f(x): return np.arctan2(x[0] - center[0], x[1] - center[1])
   vertices = sorted(vertices, key=f)
-  return vertices
+  return np.array(vertices)
 
 
 from math import sqrt
@@ -155,7 +159,7 @@ def formular(A, B):
 
 
 def angle(Q, M, O, N):
-  if Q == M:
+  if np.all(Q == M):
     return 0
   OM = sub(M, O)
   OQ = sub(Q, O)
@@ -219,7 +223,7 @@ def isSubset(parent, child):
   return True
 
 
-def bset_get_faces(basicSet):
+def bset_get_faces(basicSet: isl.basic_set):
   """
   Get a list of faces from a basic set
 
@@ -328,7 +332,7 @@ def _constraint_make_equality_set(x):
   return isl.basic_set.universe(x.space).add_constraint(e)
 
 
-def bset_get_points(bset_data, only_hull=False, scale=1):
+def bset_get_points(bset_data, only_hull=False, scale=1) -> List[List[int]]:
   """
   Given a basic set return the points within this set
 

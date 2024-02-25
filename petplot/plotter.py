@@ -1,9 +1,16 @@
 import matplotlib.pyplot as _plt
+from matplotlib import colormaps
+from matplotlib import collections
 from matplotlib.ticker import MaxNLocator
 import isl
 from petplot.support import *
-from typing import Tuple, List, Union
+from typing import Tuple, List, Union, Deque
+from dataclasses import dataclass
 
+@dataclass
+class ProcessorMap:
+    Domain: isl.basic_set
+    Range: range
 
 def plot_set_points(set_datas: Union[isl.set, List[isl.set]], color="black", size=10, marker="o", scale=1):
     """
@@ -18,7 +25,6 @@ def plot_set_points(set_datas: Union[isl.set, List[isl.set]], color="black", siz
     if isinstance(set_datas, (isl.set, isl.basic_set, isl.union_set)):
         set_datas = [set_datas]
     for set_data in set_datas:
-        points = []
         points = bset_get_points(set_data, scale=scale)
         dimX = [x[1] for x in points]
         dimY = [x[0] for x in points]
@@ -84,19 +90,19 @@ def plot_map(map: isl.map, edge_style="-|>", edge_width=1,
     """
     all_start: List[Tuple[int, int]] = []
     all_ends: List[Tuple[int, int]] = []
-    start_points : List[isl.point] = []
-    map_datas : List[isl.basic_map] = []
-    labels : List[str] = []
-    map.foreach_basic_map(lambda bmap : map_datas.append(bmap))
+    start_points: List[isl.point] = []
+    map_datas: List[isl.basic_map] = []
+    labels: List[str] = []
+    map.foreach_basic_map(lambda bmap: map_datas.append(bmap))
     for map_data in map_datas:
         if len(labels) == 0:
             sp = map_data.get_space()
             for i in range(2):
-              if sp.dim(isl.ISL_DIM_TYPE.OUT) > i:
-                if sp.has_dim_name(isl.ISL_DIM_TYPE.OUT, i):
-                  labels.append(sp.get_dim_name(isl.ISL_DIM_TYPE.OUT, i))
-                else:
-                  labels.append("")
+                if sp.dim(isl.ISL_DIM_TYPE.OUT) > i:
+                    if sp.has_dim_name(isl.ISL_DIM_TYPE.OUT, i):
+                        labels.append(sp.get_dim_name(isl.ISL_DIM_TYPE.OUT, i))
+                    else:
+                        labels.append("")
             labels.reverse()
         map_data.range().foreach_point(start_points.append)
         for start in start_points:
@@ -120,9 +126,9 @@ def plot_map(map: isl.map, edge_style="-|>", edge_width=1,
                   for p in all_ends], "o", markersize=marker_size, color=end_color, lw=0)
     ax: _plt.Axes = _plt.gca()
     if labels[0] is not None:
-      _plt.xlabel(labels[0])
+        _plt.xlabel(labels[0])
     if labels[1] is not None:
-      _plt.ylabel(labels[1], rotation = 0)
+        _plt.ylabel(labels[1], rotation=0)
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
@@ -221,10 +227,9 @@ def plot_set_shapes(set_data, *args, **kwargs):
 
     set_data.foreach_basic_set(lambda x: plot_bset_shape(x, **kwargs))
 
-
-def plot_map_as_groups(bmap: isl.basic_map, color="gray", alpha=1.0,
+def plot_map_as_groups(bmap: isl.basic_map, processors_mapping: ProcessorMap=None, color="gray", alpha=1.0,
                        vertex_color=None, vertex_marker="o",
-                       vertex_size=10, scale=1, border=0.25):
+                       vertex_size=10, scale=1, border=0.15):
     """
     Plot a map in groups of convex sets
 
@@ -236,6 +241,7 @@ def plot_map_as_groups(bmap: isl.basic_map, color="gray", alpha=1.0,
     iteration vectors to tile ids.
 
     :param bmap: The map defining the groups of convex sets.
+    :param processors_mapping: A map of the parallell executed processors hyperplanes.
     :param vertex_color: The color the vertices are plotted.
     :param vertex_size: The size the vertices are plotted.
     :param vertex_marker: The marker the vertices are plotted as.
@@ -245,14 +251,12 @@ def plot_map_as_groups(bmap: isl.basic_map, color="gray", alpha=1.0,
     :param alpha: The alpha the shapes are plotted.
     """
 
-    if not vertex_color:
+    if not vertex_color and color is str:
         vertex_color = color
 
-    points : List[isl.point] = []
-    range = bmap.range()
-    range.foreach_point(points.append)
 
-    for point in points:
+    def plot_group_points(points: List[isl.point], region_color: str):
+      for point in points:
         point_set = isl.basic_set(point)
         part_set: isl.set = bmap.intersect_range(point_set).domain()
         part_set_convex: isl.basic_set = part_set.convex_hull()
@@ -263,23 +267,36 @@ def plot_map_as_groups(bmap: isl.basic_map, color="gray", alpha=1.0,
 
         part_set = part_set_convex
 
-        plot_set_points(part_set, color=vertex_color, size=vertex_size,
-                        marker=vertex_marker, scale=scale)
+        # plot_set_points(part_set, color=vertex_color, size=vertex_size,
+        #                 marker=vertex_marker, scale=scale)
         part_set = part_set.remove_divs()
-        plot_bset_shape(part_set, color=color, alpha=alpha,
+        plot_bset_shape(part_set, color=region_color, alpha=alpha,
                         vertex_color=vertex_color,
                         vertex_size=vertex_size, vertex_marker=vertex_marker,
                         show_vertices=False, scale=scale, border=border)
+    
+    range: isl.set = bmap.range()
+    if processors_mapping is None:
+      points: List[isl.point] = []
+      range.foreach_point(points.append)
+      plot_group_points(points, color)
+    else:
+      colorbars = colormaps[color].resampled(len(processors_mapping.Range))
+      for processor_id in processors_mapping.Range:
+        processor_range = range.intersect(processors_mapping.Domain.intersect_params(isl.set(f"[P] -> {{ : P = {processor_id} }}")))
+        points: List[isl.point] = []
+        processor_range.foreach_point(points.append)
+        plot_group_points(points, colorbars(processor_id))
 
 
-def plot_domain(domain, dependences=None, tiling=None, space=None,
+def plot_domain(domain, dependences=None, tiling=None, space=None, processors_mapping:ProcessorMap=None,
                 tile_color="skyblue", tile_alpha=1,
                 vertex_color="black", vertex_size=10,
                 vertex_marker="o", background=True,
                 bg_vertex_color="lightgray", bg_vertex_size=10,
                 bg_vertex_marker="o",
                 dep_color="gray", dep_style="->", dep_width=1,
-                shrink=6, border=0.25
+                shrink=6, border=0.15
                 ):
     """
     Plot an iteration space domain and related information.
@@ -289,6 +306,7 @@ def plot_domain(domain, dependences=None, tiling=None, space=None,
     :param dependences: The dependences between the different iterations
     :param tiling: A mapping from iteration space groups onto their corresponding
                    (possibly multi-dimensional) tile ID.
+    :param processers_mapping: A processers mapping of the hyperplanes
     :param space: Show the data after mapping it to a new space.
     :param tile_color: The color to use for the tile shape.
     :param tile_alpha: The alpha value used for the tile background.
@@ -335,7 +353,7 @@ def plot_domain(domain, dependences=None, tiling=None, space=None,
 
     if tiling:
         tiling = tiling.intersect_domain(domain)
-        plot_map_as_groups(tiling, color=tile_color, vertex_color=vertex_color,
+        plot_map_as_groups(tiling, processors_mapping, color=tile_color, vertex_color=vertex_color,
                            vertex_size=vertex_size, vertex_marker=vertex_marker,
                            alpha=tile_alpha, border=border)
 
