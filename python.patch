@@ -1,0 +1,73 @@
+diff --color -r -u python/CMakeLists.txt /Users/lisa/Downloads/mlir-17.0.4.src/python/CMakeLists.txt
+--- python/CMakeLists.txt	2024-06-25 22:38:43
++++ /Users/lisa/Downloads/mlir-17.0.4.src/python/CMakeLists.txt	2023-10-31 16:00:30
+@@ -49,15 +49,6 @@
+ declare_mlir_dialect_python_bindings(
+   ADD_TO_PARENT MLIRPythonSources.Dialects
+   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+-  TD_FILE dialects/AffineOps.td
+-  SOURCES
+-    dialects/affine.py
+-    dialects/_affine_ops_ext.py
+-  DIALECT_NAME affine)
+-
+-declare_mlir_dialect_python_bindings(
+-  ADD_TO_PARENT MLIRPythonSources.Dialects
+-  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+   TD_FILE dialects/AsyncOps.td
+   SOURCES_GLOB dialects/async_dialect/*.py
+   DIALECT_NAME async_dialect)
+diff --color -r -u python/mlir/_mlir_libs/_mlir/ir.pyi /Users/lisa/Downloads/mlir-17.0.4.src/python/mlir/_mlir_libs/_mlir/ir.pyi
+--- python/mlir/_mlir_libs/_mlir/ir.pyi	2024-07-18 18:13:08
++++ /Users/lisa/Downloads/mlir-17.0.4.src/python/mlir/_mlir_libs/_mlir/ir.pyi	2023-10-31 16:00:30
+@@ -78,7 +78,6 @@
+     "NoneType",
+     "OpaqueType",
+     "OpAttributeMap",
+-    "OpOperand",
+     "OpOperandList",
+     "OpResult",
+     "OpResultList",
+@@ -206,7 +205,6 @@
+ class Value:
+     def _CAPICreate(self) -> Value: ...
+     def dump(self) -> None: ...
+-    def replace_all_uses_with(self, other: Value) -> None: ...
+     @overload
+     def __eq__(self, arg0: Value) -> bool: ...
+     @overload
+@@ -219,8 +217,6 @@
+     @property
+     def owner(self) -> _OperationBase: ...
+     @property
+-    def uses(self) -> OpOperandIterator: ...
+-    @property
+     def type(self) -> Type: ...
+ 
+ 
+@@ -910,14 +906,6 @@
+     def __len__(self) -> int: ...
+     def __setitem__(self, arg0: str, arg1: Attribute) -> None: ...
+ 
+-class OpOperand:
+-    def owner(self) -> OpView: ...
+-    def operand_number(self) -> int: ... 
+-
+-class OpOperandIterator:
+-    def __iter__(self) -> OpOperandIterator: ...
+-    def __next__(self) -> OpOperand: ...
+-
+ class OpOperandList:
+     def __add__(self, arg0: OpOperandList) -> List[Value]: ...
+     @overload
+@@ -977,7 +965,6 @@
+         loc: Optional[Location] = None,
+         ip: Optional[InsertionPoint] = None) -> _OperationBase: ...
+     def erase(self) -> None: ...
+-    def clone(self, ip: Optional[InsertionPoint] = None) -> None: ...
+     @property
+     def _CAPIPtr(self) -> object: ...
+     @property
+Only in python/mlir/dialects: AffineOps.td
+Only in python/mlir/dialects: _affine_ops_ext.py
+Only in python/mlir/dialects: affine.py

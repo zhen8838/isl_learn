@@ -1,0 +1,25 @@
+diff --color -Naur lib/Bindings/Python/IRAttributes.cpp /Users/lisa/Downloads/mlir-17.0.4.src/lib/Bindings/Python/IRAttributes.cpp
+--- lib/Bindings/Python/IRAttributes.cpp	2024-07-09 23:30:06
++++ /Users/lisa/Downloads/mlir-17.0.4.src/lib/Bindings/Python/IRAttributes.cpp	2024-07-19 23:24:15
+@@ -87,9 +87,6 @@
+       mlirAffineMapAttrGetTypeID;
+ 
+   static void bindDerived(ClassTy &c) {
+-    c.def_property_readonly("value", [](PyAttribute &self) {
+-      return PyAffineMap(self.getContext(), mlirAffineMapAttrGetValue(self.get())); 
+-    });
+     c.def_static(
+         "get",
+         [](PyAffineMap &affineMap) {
+diff --color -Naur lib/Bindings/Python/IRCore.cpp /Users/lisa/Downloads/mlir-17.0.4.src/lib/Bindings/Python/IRCore.cpp
+--- lib/Bindings/Python/IRCore.cpp	2024-07-18 18:15:21
++++ /Users/lisa/Downloads/mlir-17.0.4.src/lib/Bindings/Python/IRCore.cpp	2024-07-19 23:24:17
+@@ -2759,7 +2759,7 @@
+       .def_property_readonly("attributes",
+                              [](PyOperationBase &self) {
+                                return PyOpAttributeMap(
+-                                  self.getOperation().getRef());
++                                   self.getOperation().getRef());
+                              })
+       .def_property_readonly("operands",
+                              [](PyOperationBase &self) {
