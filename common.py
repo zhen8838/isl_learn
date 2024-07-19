@@ -134,7 +134,12 @@ def bset_dim_titles(m: isl.basic_set):
               isl.ISL_DIM_TYPE.SET,
               isl.ISL_DIM_TYPE.DIV]:
         for i in range(m.dim(t)):
-            names.append(t.name + " " + m.get_dim_name(t, i))
+            name = f"v{i}"
+            try:
+                name = m.dim_name(t, i)
+            except Exception:
+                pass
+            names.append(t.name + " " + name)
     return names
 
 
@@ -145,7 +150,12 @@ def bmap_dim_titles(m: isl.basic_map):
               isl.ISL_DIM_TYPE.OUT,
               isl.ISL_DIM_TYPE.DIV]:
         for i in range(m.dim(t)):
-            names.append(t.name + " " + m.get_dim_name(t, i))
+            name = f"v{i}"
+            try:
+                name = m.dim_name(t, i)
+            except Exception:
+                pass
+            names.append(t.name + " " + name)
     return names
 
 
