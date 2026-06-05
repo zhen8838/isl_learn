@@ -1,0 +1,83 @@
+// Auto Generated
+
+#include <cuda_runtime.h>
+#include <tvm/ffi/tvm_ffi.h>
+
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <vector>
+
+#include "include/etensor.cuh"
+
+namespace {
+
+{{ device_functions }}
+
+{{ task_macros }}
+
+enum TaskKind : int {
+{% for task in task_types -%}
+  {{ task.enum_name }} = {{ task.kind }},
+{% endfor %}
+};
+
+constexpr int TASK_SET_COUNT = {{ task_set_count }};
+constexpr int READY_QUEUE_CAPACITY = {{ ready_queue_capacity }};
+constexpr int TOTAL_TILE_COUNT = {{ total_tile_count }};
+
+struct TaskSetDesc {
+  int task_type;
+  int index_rank;
+  int index_begin;
+  int index_end;
+  int next_set_id;
+};
+
+{% for array in arrays -%}
+__device__ __constant__ {{ array.ctype }} {{ array.name }}[] = { {{ array.values }} };
+{% endfor %}
+
+#include "include/dynamic_tile_scheduler.cuh"
+
+#define CUDA_CHECK(expr)                                                       \
+  do {                                                                         \
+    cudaError_t _err = (expr);                                                 \
+    if (_err != cudaSuccess) {                                                 \
+      std::fprintf(stderr, "CUDA error %s:%d: %s\n", __FILE__, __LINE__,      \
+                   cudaGetErrorString(_err));                                  \
+      std::abort();                                                            \
+    }                                                                          \
+  } while (0)
+
+__global__ void mega_kernel({{ kernel_signature }}) {
+  __shared__ TaskScheduler scheduler;
+
+  scheduler.init();
+
+  while (scheduler.valid()) {
+    const int* task_idx = scheduler.indices();
+    switch (scheduler.type()) {
+{% for task in task_types %}
+    case {{ task.enum_name }}: {
+{% for line in task.body_lines %}
+      {{ line }}
+{% endfor %}
+      break;
+    }
+{% endfor %}
+    }
+  }
+}
+
+{{ task_undefs }}
+
+void run_static_impl({{ host_params }}) {
+{% for line in host_body_lines %}
+  {{ line }}
+{% endfor %}
+}
+
+}  // namespace
+
+TVM_FFI_DLL_EXPORT_TYPED_FUNC(run_static, run_static_impl);

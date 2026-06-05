@@ -1,0 +1,40 @@
+// Auto Generated
+
+#include <cuda_runtime.h>
+#include <tvm/ffi/tvm_ffi.h>
+
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <vector>
+
+#include "include/etensor.cuh"
+
+namespace {
+
+{{ device_functions }}
+
+{{ task_macros }}
+
+#define CUDA_CHECK(expr)                                                       \
+  do {                                                                         \
+    cudaError_t _err = (expr);                                                 \
+    if (_err != cudaSuccess) {                                                 \
+      std::fprintf(stderr, "CUDA error %s:%d: %s\n", __FILE__, __LINE__,      \
+                   cudaGetErrorString(_err));                                  \
+      std::abort();                                                            \
+    }                                                                          \
+  } while (0)
+
+__global__ void mega_kernel({{ kernel_signature }}) {
+{{ block_params }}
+{{ schedule | indent(2, true) }}
+}
+
+{{ task_undefs }}
+
+{{ host_code }}
+
+}  // namespace
+
+TVM_FFI_DLL_EXPORT_TYPED_FUNC(run_static, run_static_impl);
