@@ -39,6 +39,10 @@ dowhen,mpi4py
 | 17. Axe Layout
 
 |
+| 18. Event Tensor
+1.1+| using https://pypi.org/project/isl-python/[isl-python]
+https://github.com/tile-ai/tilelang[TileLang]
+https://github.com/apache/tvm-ffi[TVM_FFI]
 |===
 
 
